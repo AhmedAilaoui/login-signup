@@ -1,4 +1,10 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/require-await */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto/register.dto';
@@ -18,6 +24,7 @@ export class AuthService {
         lastName: registerDto.lastName,
         email: registerDto.email,
         password: registerDto.password,
+        role: registerDto.role,
         phone: registerDto.phone || undefined,
       });
 
@@ -32,11 +39,12 @@ export class AuthService {
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
+          role: user.role,
         },
       };
     } catch (error) {
       throw new BadRequestException(
-        error.message || 'Erreur lors de l\'inscription',
+        error.message || "Erreur lors de l'inscription",
       );
     }
   }
@@ -72,6 +80,7 @@ export class AuthService {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        role: user.role,
       },
     };
   }
@@ -80,6 +89,7 @@ export class AuthService {
     return this.jwtService.sign({
       email: user.email,
       sub: user.id,
+      role: user.role,
     });
   }
 }

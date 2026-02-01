@@ -3,7 +3,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from './config/config.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { ProductModule } from './product/product.module';
 import { User } from './users/entities/user.entity';
+import { Product } from './product/product.entity';
 
 @Module({
   imports: [
@@ -14,13 +16,14 @@ import { User } from './users/entities/user.entity';
       username: process.env.DB_USERNAME || 'root',
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_DATABASE || 'nexus_db',
-      entities: [User],
-      synchronize: true, // À désactiver en production
+      entities: [User, Product],
+      synchronize: true,
       logging: false,
     }),
     ConfigModule,
     AuthModule,
     UsersModule,
+    ProductModule,
   ],
 })
 export class AppModule {}

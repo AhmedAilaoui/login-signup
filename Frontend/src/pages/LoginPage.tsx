@@ -34,10 +34,24 @@ function LoginPage() {
       const response = await axios.post("/api/auth/login", formData);
 
       if (response.data.success) {
-        // Stocker le token
+        // ✅ Stocker le token ET le rôle utilisateur
         localStorage.setItem("token", response.data.token);
-        // Rediriger vers la page d'accueil
-        navigate("/");
+        localStorage.setItem("userRole", response.data.user.role);
+
+        // ✅ Stocker aussi les infos utilisateur
+        localStorage.setItem("userId", response.data.user.id);
+        localStorage.setItem("userEmail", response.data.user.email);
+        localStorage.setItem(
+          "userName",
+          `${response.data.user.firstName} ${response.data.user.lastName}`,
+        );
+
+        // ✅ Redirection conditionnelle selon le rôle
+        if (response.data.user.role === "vendeur") {
+          navigate("/dashboard"); // Admin → Dashboard
+        } else {
+          navigate("/products-list"); // Client → Liste produits
+        }
       }
     } catch (err) {
       const error = err as AxiosError<{ message: string }>;

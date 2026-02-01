@@ -10,6 +10,7 @@ interface FormData {
   password: string;
   confirmPassword: string;
   phone: string;
+  role: "client" | "vendeur" | "";
   acceptTerms: boolean;
 }
 
@@ -20,6 +21,7 @@ interface FormErrors {
   password?: string;
   confirmPassword?: string;
   phone?: string;
+  role?: string;
   acceptTerms?: string;
   submit?: string;
 }
@@ -34,6 +36,7 @@ function SubscribePage() {
     password: "",
     confirmPassword: "",
     phone: "",
+    role: "",
     acceptTerms: false,
   });
   const [errors, setErrors] = useState<FormErrors>({});
@@ -48,9 +51,18 @@ function SubscribePage() {
       ...formData,
       [name]: type === "checkbox" ? checked : value,
     });
-    // Effacer l'erreur pour ce champ
     if (errors[name as keyof FormErrors]) {
       setErrors({ ...errors, [name]: "" });
+    }
+  };
+
+  const handleRoleSelect = (role: "client" | "vendeur") => {
+    setFormData({
+      ...formData,
+      role: role,
+    });
+    if (errors.role) {
+      setErrors({ ...errors, role: "" });
     }
   };
 
@@ -67,6 +79,9 @@ function SubscribePage() {
       newErrors.email = "L'email est requis";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Email invalide";
+    }
+    if (!formData.role) {
+      newErrors.role = "Veuillez choisir un type de compte";
     }
 
     setErrors(newErrors);
@@ -119,11 +134,26 @@ function SubscribePage() {
         email: formData.email,
         password: formData.password,
         phone: formData.phone,
+        role: formData.role,
       });
 
       if (response.data.success) {
-        // Rediriger vers la page de connexion
-        navigate("/login");
+        // ✅ Sauvegarder le token et les infos utilisateur
+        localStorage.setItem("token", response.data.token);
+        localStorage.setItem("userRole", response.data.user.role);
+        localStorage.setItem("userId", response.data.user.id);
+        localStorage.setItem("userEmail", response.data.user.email);
+        localStorage.setItem(
+          "userName",
+          `${response.data.user.firstName} ${response.data.user.lastName}`,
+        );
+
+        // ✅ Rediriger selon le rôle
+        if (response.data.user.role === "vendeur") {
+          navigate("/dashboard"); // Dashboard vendeur
+        } else {
+          navigate("/products-list"); // ✅ CORRIGÉ: Page produits pour client
+        }
       }
     } catch (err) {
       const error = err as AxiosError<{ message: string }>;
@@ -191,6 +221,36 @@ function SubscribePage() {
           <form onSubmit={handleSubmit} className="subscribe-form">
             {step === 1 && (
               <div className="form-step" key="step1">
+                {/* Sélecteur de rôle */}
+                <div className="role-selector-group">
+                  <label className="input-label">Type de compte *</label>
+                  <div className="role-cards">
+                    <div
+                      className={`role-card ${formData.role === "client" ? "selected" : ""}`}
+                      onClick={() => handleRoleSelect("client")}
+                    >
+                      <div className="role-icon">🛍️</div>
+                      <h3 className="role-title">Client</h3>
+                      <p className="role-description">
+                        Je veux acheter des produits
+                      </p>
+                    </div>
+                    <div
+                      className={`role-card ${formData.role === "vendeur" ? "selected" : ""}`}
+                      onClick={() => handleRoleSelect("vendeur")}
+                    >
+                      <div className="role-icon">🏪</div>
+                      <h3 className="role-title">Vendeur</h3>
+                      <p className="role-description">
+                        Je veux vendre mes produits
+                      </p>
+                    </div>
+                  </div>
+                  {errors.role && (
+                    <span className="field-error">{errors.role}</span>
+                  )}
+                </div>
+
                 <div className="input-row">
                   <div className="input-group">
                     <label htmlFor="firstName" className="input-label">

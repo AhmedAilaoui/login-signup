@@ -6,6 +6,11 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+export enum UserRole {
+  CLIENT = 'client',
+  VENDEUR = 'vendeur',
+}
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
@@ -22,6 +27,13 @@ export class User {
 
   @Column()
   password: string;
+
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+    default: UserRole.CLIENT,
+  })
+  role: UserRole;
 
   @Column({ nullable: true })
   phone: string;
