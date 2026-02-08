@@ -10,6 +10,10 @@ function Header() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("userRole");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("cart"); 
     navigate("/login");
   };
 
@@ -43,6 +47,10 @@ function Header() {
                 </Link>
                 <Link to="/cart" className="nav-link">
                   🛒 Mon Panier
+                </Link>
+                {/* ✅ NOUVEAU - Lien vers l'historique des commandes */}
+                <Link to="/orders-history" className="nav-link">
+                  📦 Mes Commandes
                 </Link>
               </>
             )}

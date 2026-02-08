@@ -1,18 +1,15 @@
-/* eslint-disable react-hooks/immutability */
-// src/pages/Cart/CartPage.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import Header from "../components/header";
 import "./CartPage.css";
 
 interface CartItem {
   id: number;
   productId: number;
   name: string;
-  description: string;
   price: number;
   quantity: number;
-  mainImage?: string;
+  mainImage: string;
   seller: {
     firstName: string;
     lastName: string;
@@ -20,226 +17,227 @@ interface CartItem {
 }
 
 function CartPage() {
-  const navigate = useNavigate();
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState(false);
+  const navigate = useNavigate();
+
+  const SHIPPING_COST = 7.0;
 
   useEffect(() => {
-    // Vérifier que l'utilisateur est bien un client
-    const userRole = localStorage.getItem("userRole");
-    if (userRole === "vendeur") {
-      navigate("/dashboard");
-      return;
-    }
-
-    // Charger le panier depuis le localStorage
     loadCart();
-  }, [navigate]);
+  }, []);
 
   const loadCart = () => {
-    try {
-      const savedCart = localStorage.getItem("cart");
-      if (savedCart) {
-        setCartItems(JSON.parse(savedCart));
-      }
-    } catch (error) {
-      console.error("Erreur lors du chargement du panier:", error);
+    const savedCart = localStorage.getItem("cart");
+    if (savedCart) {
+      setCart(JSON.parse(savedCart));
     }
   };
 
-  const saveCart = (items: CartItem[]) => {
-    localStorage.setItem("cart", JSON.stringify(items));
-    setCartItems(items);
-  };
-
-  const updateQuantity = (productId: number, newQuantity: number) => {
+  const updateQuantity = (itemId: number, newQuantity: number) => {
     if (newQuantity < 1) return;
 
-    const updatedCart = cartItems.map((item) =>
-      item.productId === productId ? { ...item, quantity: newQuantity } : item,
+    const updatedCart = cart.map((item) =>
+      item.id === itemId ? { ...item, quantity: newQuantity } : item,
     );
-    saveCart(updatedCart);
+    setCart(updatedCart);
+    localStorage.setItem("cart", JSON.stringify(updatedCart));
   };
 
-  const removeItem = (productId: number) => {
-    const updatedCart = cartItems.filter(
-      (item) => item.productId !== productId,
-    );
-    saveCart(updatedCart);
+  const removeItem = (itemId: number) => {
+    const updatedCart = cart.filter((item) => item.id !== itemId);
+    setCart(updatedCart);
+    localStorage.setItem("cart", JSON.stringify(updatedCart));
   };
 
   const clearCart = () => {
-    if (window.confirm("Voulez-vous vraiment vider le panier ?")) {
-      saveCart([]);
-    }
+    setCart([]);
+    localStorage.removeItem("cart");
   };
 
   const calculateSubtotal = () => {
-    return cartItems.reduce(
-      (total, item) => total + item.price * item.quantity,
-      0,
-    );
-  };
-
-  const calculateShipping = () => {
-    return cartItems.length > 0 ? 7.0 : 0; // Frais de livraison fixes
+    return cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   };
 
   const calculateTotal = () => {
-    return calculateSubtotal() + calculateShipping();
+    return calculateSubtotal() + SHIPPING_COST;
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
+    if (cart.length === 0) return;
+
     setLoading(true);
-    // Simuler un processus de paiement
-    setTimeout(() => {
-      alert("Commande passée avec succès ! (Simulation)");
-      saveCart([]);
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      // Préparer les données de la commande
+      const orderData = {
+        items: cart.map((item) => ({
+          productId: item.productId,
+          productName: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          productImage: item.mainImage,
+          sellerName: `${item.seller.firstName} ${item.seller.lastName}`,
+        })),
+        subtotal: calculateSubtotal(),
+        shippingCost: SHIPPING_COST,
+        totalAmount: calculateTotal(),
+        shippingAddress: "Adresse à définir", // Vous pouvez ajouter un formulaire pour ça
+        phone: localStorage.getItem("userPhone") || "",
+        notes: "",
+      };
+
+      // Envoyer la commande au backend
+      const response = await fetch("http://localhost:3001/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(orderData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Erreur lors de la commande");
+      }
+
+      // Commande réussie
+      setOrderSuccess(true);
+      clearCart();
+
+      // Rediriger vers l'historique des commandes après 2 secondes
+      setTimeout(() => {
+        navigate("/orders-history");
+      }, 2000);
+    } catch (error: any) {
+      console.error("Erreur lors de la commande:", error);
+      alert(`Erreur: ${error.message}`);
+    } finally {
       setLoading(false);
-      navigate("/products-list");
-    }, 1500);
+    }
   };
+
+  if (orderSuccess) {
+    return (
+      <div className="cart-page">
+        <div className="success-message">
+          <div className="success-icon">✓</div>
+          <h2>Commande passée avec succès !</h2>
+          <p>
+            Merci pour votre achat. Vous allez être redirigé vers vos
+            commandes...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="cart-page">
-      <Header />
+      <div className="bg-decoration">
+        <div className="circle circle-1"></div>
+        <div className="circle circle-2"></div>
+      </div>
 
       <div className="cart-container">
-        {/* En-tête */}
         <div className="cart-header">
           <h1>🛒 Mon Panier</h1>
-          <p className="cart-subtitle">
-            {cartItems.length} article{cartItems.length > 1 ? "s" : ""} dans
-            votre panier
+          <p>
+            {cart.length > 0
+              ? `${cart.length} article(s) dans votre panier`
+              : "Votre panier est vide"}
           </p>
         </div>
 
-        {cartItems.length === 0 ? (
-          /* Panier vide */
+        {cart.length === 0 ? (
           <div className="empty-cart">
-            <div className="empty-icon">🛍️</div>
+            <div className="empty-icon">🛒</div>
             <h2>Votre panier est vide</h2>
-            <p>Découvrez nos produits et ajoutez-en à votre panier !</p>
+            <p>Découvrez nos produits et ajoutez-les à votre panier !</p>
             <button
+              className="btn-discover"
               onClick={() => navigate("/products-list")}
-              className="btn btn-primary"
             >
-              Découvrir les produits
+              🛍️ Découvrir les produits
             </button>
           </div>
         ) : (
-          /* Panier avec articles */
           <div className="cart-content">
-            {/* Liste des articles */}
             <div className="cart-items">
-              {cartItems.map((item) => (
+              {cart.map((item) => (
                 <div key={item.id} className="cart-item">
-                  <div className="item-image">
-                    {item.mainImage ? (
-                      <img src={item.mainImage} alt={item.name} />
-                    ) : (
-                      <div className="image-placeholder">🖼️</div>
-                    )}
-                  </div>
-
+                  <img
+                    src={item.mainImage}
+                    alt={item.name}
+                    className="item-image"
+                  />
                   <div className="item-details">
-                    <h3 className="item-name">{item.name}</h3>
+                    <h3>{item.name}</h3>
                     <p className="item-seller">
                       Vendu par : {item.seller.firstName} {item.seller.lastName}
                     </p>
-                    <p className="item-description">{item.description}</p>
+                    <p className="item-price">{item.price.toFixed(2)} TND</p>
                   </div>
-
                   <div className="item-quantity">
                     <button
-                      onClick={() =>
-                        updateQuantity(item.productId, item.quantity - 1)
-                      }
-                      className="qty-btn"
+                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
                       disabled={item.quantity <= 1}
                     >
                       −
                     </button>
-                    <span className="qty-value">{item.quantity}</span>
+                    <span>{item.quantity}</span>
                     <button
-                      onClick={() =>
-                        updateQuantity(item.productId, item.quantity + 1)
-                      }
-                      className="qty-btn"
+                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
                     >
                       +
                     </button>
                   </div>
-
-                  <div className="item-price">
-                    <div className="unit-price">
-                      {item.price.toFixed(2)} TND
-                    </div>
-                    <div className="total-price">
-                      {(item.price * item.quantity).toFixed(2)} TND
-                    </div>
+                  <div className="item-total">
+                    {(item.price * item.quantity).toFixed(2)} TND
                   </div>
-
                   <button
-                    onClick={() => removeItem(item.productId)}
                     className="btn-remove"
-                    title="Supprimer"
+                    onClick={() => removeItem(item.id)}
                   >
                     🗑️
                   </button>
                 </div>
               ))}
 
-              {/* Bouton vider le panier */}
-              <button onClick={clearCart} className="btn-clear-cart">
-                🗑️ Vider le panier
+              <button className="btn-clear-cart" onClick={clearCart}>
+                Vider le panier
               </button>
             </div>
 
-            {/* Résumé de la commande */}
             <div className="cart-summary">
               <h2>Résumé de la commande</h2>
-
-              <div className="summary-line">
+              <div className="summary-row">
                 <span>Sous-total</span>
                 <span>{calculateSubtotal().toFixed(2)} TND</span>
               </div>
-
-              <div className="summary-line">
-                <span>Livraison</span>
-                <span>{calculateShipping().toFixed(2)} TND</span>
+              <div className="summary-row">
+                <span>Frais de livraison</span>
+                <span>{SHIPPING_COST.toFixed(2)} TND</span>
               </div>
-
-              <div className="summary-line total">
-                <span>Total</span>
-                <span className="total-amount">
-                  {calculateTotal().toFixed(2)} TND
-                </span>
+              <div className="summary-row total">
+                <strong>Total</strong>
+                <strong>{calculateTotal().toFixed(2)} TND</strong>
               </div>
-
               <button
+                className="btn-checkout"
                 onClick={handleCheckout}
-                className="btn btn-primary btn-checkout"
                 disabled={loading}
               >
-                {loading ? "⏳ Traitement..." : "✓ Commander"}
+                {loading ? "Traitement..." : "Passer la commande"}
               </button>
-
-              <button
-                onClick={() => navigate("/products-list")}
-                className="btn btn-secondary btn-continue"
-              >
-                ← Continuer mes achats
-              </button>
-
-              <div className="payment-methods">
-                <p>Modes de paiement acceptés :</p>
-                <div className="payment-icons">
-                  <span>💳</span>
-                  <span>🏦</span>
-                  <span>📱</span>
-                </div>
-              </div>
             </div>
           </div>
         )}

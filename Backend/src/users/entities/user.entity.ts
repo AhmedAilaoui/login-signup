@@ -1,11 +1,13 @@
 import {
   Entity,
-  Column,
   PrimaryGeneratedColumn,
+  Column,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
-
+import { Product } from '../../product/product.entity';
+import { Order } from '../../orders/entities/order.entity';
 export enum UserRole {
   CLIENT = 'client',
   VENDEUR = 'vendeur',
@@ -28,6 +30,9 @@ export class User {
   @Column()
   password: string;
 
+  @Column({ nullable: true })
+  phone: string;
+
   @Column({
     type: 'enum',
     enum: UserRole,
@@ -35,8 +40,11 @@ export class User {
   })
   role: UserRole;
 
-  @Column({ nullable: true })
-  phone: string;
+  @OneToMany(() => Product, (product) => product.seller)
+  products: Product[];
+
+  @OneToMany(() => Order, (order) => order.user)
+  orders: Order[];
 
   @CreateDateColumn()
   createdAt: Date;

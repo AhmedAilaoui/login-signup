@@ -5,7 +5,8 @@ import LoginPage from "./pages/LoginPage";
 import SubscribePage from "./pages/SubscribePage";
 import DashboardPage from "./pages/DashboardPage";
 import ProductsListPage from "./pages/Productslistpage";
-import CartPage from "./pages/CartPage"; // ✅ NOUVEAU
+import CartPage from "./pages/CartPage";
+import OrdersHistoryPage from "./pages/Ordershistorypage"; 
 import type { JSX } from "react";
 
 // Composant de protection des routes
@@ -35,7 +36,7 @@ function VendorRoute({ children }: { children: JSX.Element }) {
   return children;
 }
 
-// ✅ Route protégée pour les clients uniquement
+// Route protégée pour les clients uniquement
 function ClientRoute({ children }: { children: JSX.Element }) {
   const token = localStorage.getItem("token");
   const userRole = localStorage.getItem("userRole");
@@ -79,12 +80,22 @@ function App() {
         }
       />
 
-      {/* ✅ NOUVEAU - Route protégée - CLIENTS uniquement */}
+      {/* Routes protégées - CLIENTS uniquement */}
       <Route
         path="/cart"
         element={
           <ClientRoute>
             <CartPage />
+          </ClientRoute>
+        }
+      />
+
+      {/* ✅ NOUVEAU - Route protégée - Historique des commandes (CLIENTS uniquement) */}
+      <Route
+        path="/orders-history"
+        element={
+          <ClientRoute>
+            <OrdersHistoryPage />
           </ClientRoute>
         }
       />
